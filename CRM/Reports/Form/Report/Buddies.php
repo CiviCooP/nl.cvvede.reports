@@ -3,6 +3,22 @@
 class CRM_Reports_Form_Report_Buddies extends CRM_Report_Form_Contact_Summary {
 
   /**
+   * Class constructor.
+   */
+  public function __construct() {
+    parent::__construct();
+    $this->_columns['civicrm_contact']['fields']['created_date'] = array(
+      'title' => ts('Created Date'),
+      'default' => FALSE,
+    );
+    $this->_columns['civicrm_contact']['order_bys']['created_date'] = array(
+      'name' => 'created_date',
+      'title' => ts('Created Date'),
+    );
+  }
+
+
+  /**
    * Alter display of rows.
    *
    * Iterate through the rows retrieved via SQL and make changes for display purposes,
