@@ -11,10 +11,57 @@ class CRM_Reports_Form_Report_Buddies extends CRM_Report_Form_Contact_Summary {
       'title' => ts('Created Date'),
       'default' => FALSE,
     );
+    $this->_columns['civicrm_contact']['fields']['relationships'] = array(
+      'title' => ts('Relationships'),
+      'pseudofield' => TRUE,
+    );
     $this->_columns['civicrm_contact']['order_bys']['created_date'] = array(
       'name' => 'created_date',
       'title' => ts('Created Date'),
     );
+  }
+
+  public function select() {
+    $select = array();
+    $this->_columnHeaders = array();
+    foreach ($this->_columns as $tableName => $table) {
+      if (array_key_exists('fields', $table)) {
+        foreach ($table['fields'] as $fieldName => $field) {
+          if (!empty($field['pseudofield'])) {
+            continue;
+          }
+          if (!empty($field['required']) ||
+            !empty($this->_params['fields'][$fieldName])
+          ) {
+            if ($tableName == 'civicrm_email') {
+              $this->_emailField = TRUE;
+            }
+            elseif ($tableName == 'civicrm_phone') {
+              $this->_phoneField = TRUE;
+            }
+            elseif ($tableName == 'civicrm_country') {
+              $this->_countryField = TRUE;
+            }
+
+            $alias = "{$tableName}_{$fieldName}";
+            $select[] = "{$field['dbAlias']} as {$alias}";
+            $this->_columnHeaders["{$tableName}_{$fieldName}"]['type'] = CRM_Utils_Array::value('type', $field);
+            $this->_columnHeaders["{$tableName}_{$fieldName}"]['title'] = $field['title'];
+            $this->_selectAliases[] = $alias;
+          }
+        }
+      }
+    }
+
+    $this->_select = "SELECT " . implode(', ', $select) . " ";
+  }
+
+  public function modifyColumnHeaders() {
+    if (!empty($this->_params['fields']['relationships'])) {
+      $this->_columnHeaders['relationships'] = array(
+        'title' => ts('Relationships'),
+      );
+    }
   }
 
 
@@ -70,6 +117,19 @@ class CRM_Reports_Form_Report_Buddies extends CRM_Report_Form_Contact_Summary {
           $rows[$rowNum]['civicrm_contact_birth_date'] = CRM_Utils_Date::customFormat($birthDate, '%Y%m%d');
         }
         $entryFound = TRUE;
+      }
+
+      if (!empty($this->_params['fields']['relationships']) && array_key_exists('civicrm_contact_id', $row)) {
+        $relationships = civicrm_api3('Relationship', 'get', array('contact_id' => $row['civicrm_contact_id'], 'status_id' => 3));
+        $relationshipsText = '';
+        foreach($relationships['values'] as $relationship) {
+          $url = CRM_Utils_System::url('civicrm/contact/view', 'reset=1&cid=' . $relationship['cid'], $this->_absoluteUrl);
+          if (strlen($relationshipsText)) {
+            $relationshipsText .= '<br>';
+          }
+          $relationshipsText .= $relationship['relation'] . '&nbsp;'.'<a href="'.$url.'">'.$relationship['display_name'].'</a>';
+          $rows[$rowNum]['relationships'] = $relationshipsText;
+        }
       }
 
       // skip looking further in rows, if first row itself doesn't
