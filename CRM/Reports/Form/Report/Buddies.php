@@ -129,7 +129,7 @@ class CRM_Reports_Form_Report_Buddies extends CRM_Report_Form_Contact_Summary {
           }
 
           $age = '';
-          $contact = civcirm_api('Contact', 'getsingle', array('id' => $relationship['cid'], 'version' => '3'));
+          $contact = civicrm_api('Contact', 'getsingle', array('id' => $relationship['cid'], 'version' => '3'));
           if (!empty($contact['birth_date'])) {
             $birthDate = new DateTime ($contact['birth_date']);
             $age = $birthDate->diff(new DateTime('now'))->y;
