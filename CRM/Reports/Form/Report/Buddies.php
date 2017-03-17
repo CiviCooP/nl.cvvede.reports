@@ -127,7 +127,16 @@ class CRM_Reports_Form_Report_Buddies extends CRM_Report_Form_Contact_Summary {
           if (strlen($relationshipsText)) {
             $relationshipsText .= '<br>';
           }
-          $relationshipsText .= $relationship['relation'] . '&nbsp;'.'<a href="'.$url.'">'.$relationship['display_name'].'</a>';
+
+          $age = '';
+          $contact = civcirm_api('Contact', 'getsingle', array('id' => $relationship['cid'], 'version' => '3'));
+          if (!empty($contact['birth_date'])) {
+            $birthDate = new DateTime ($contact['birth_date']);
+            $age = $birthDate->diff(new DateTime('now'))->y;
+            $age = ' ('.$age.')';
+          }
+
+          $relationshipsText .= $relationship['relation'] . '&nbsp;'.'<a href="'.$url.'">'.$relationship['display_name'].$age.'</a>';
           $rows[$rowNum]['relationships'] = $relationshipsText;
         }
       }
