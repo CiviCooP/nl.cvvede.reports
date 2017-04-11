@@ -165,8 +165,9 @@
                 {/foreach}
             </tr>
             <tr>
-                <td colspan="{$columnCount-1}" style="padding-top: 0px; padding-bottom: 0px;">
-                    <table style="background-color: #f0f0f0; margin-left: 10px; margin-top: 0px;">
+                <td>&nbsp;</td>
+                <td colspan="{$columnCount-2}" style="padding-top: 0px; padding-bottom: 0px;">
+                    <table style="background-color: #f0f0f0;">
                         {foreach from=$row.activities item=activity}
                             <tr>
                                 <td style="width: 10%; overflow: hidden;">{$activity.date|crmDate:$config->dateformatFull}</td>
