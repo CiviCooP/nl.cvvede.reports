@@ -6,6 +6,9 @@ class CRM_Reports_Form_Report_Buddies extends CRM_Report_Form_Contact_Summary {
    * Class constructor.
    */
   public function __construct() {
+    $this->activityTypes = CRM_Core_OptionGroup::values('activity_type', FALSE, FALSE, FALSE, $condition);
+    asort($this->activityTypes);
+
     parent::__construct();
     $this->_columns['civicrm_contact']['fields']['created_date'] = array(
       'title' => ts('Created Date'),
@@ -19,6 +22,36 @@ class CRM_Reports_Form_Report_Buddies extends CRM_Report_Form_Contact_Summary {
       'name' => 'created_date',
       'title' => ts('Created Date'),
     );
+    $this->_columns['civicrm_activity'] = array(
+      'grouping' => 'activity',
+      'group_title' => ts('Activity'),
+      'fields' => array(
+        'activity_date_time' => array(
+          'title' => ts('Activity Date'),
+        ),
+      ),
+      'filters' => array(
+        'activity_type_id' => array(
+          'title' => ts('Activity Type'),
+          'operatorType' => CRM_Report_Form::OP_SELECT,
+          'type' => CRM_Utils_Type::T_INT,
+          'options' => $this->activityTypes,
+          'pseudofield' => TRUE,
+        ),
+      ),
+      'order_bys' => array(
+        'activity_date_time' => array(
+          'title' => ts('Activity Date'),
+        ),
+      ),
+    );
+  }
+
+  /**
+   * Adds group filters to _columns (called from _Construct).
+   */
+  public function buildGroupFilter() {
+    parent::buildGroupFilter();
   }
 
   public function select() {
@@ -54,6 +87,89 @@ class CRM_Reports_Form_Report_Buddies extends CRM_Report_Form_Contact_Summary {
     }
 
     $this->_select = "SELECT " . implode(', ', $select) . " ";
+  }
+
+  public function from() {
+    $this->_from = "
+        FROM civicrm_contact {$this->_aliases['civicrm_contact']} {$this->_aclFrom}
+            LEFT JOIN civicrm_address {$this->_aliases['civicrm_address']}
+                   ON ({$this->_aliases['civicrm_contact']}.id = {$this->_aliases['civicrm_address']}.contact_id AND
+                      {$this->_aliases['civicrm_address']}.is_primary = 1 ) ";
+
+    if ($this->isTableSelected('civicrm_email')) {
+      $this->_from .= "
+            LEFT JOIN  civicrm_email {$this->_aliases['civicrm_email']}
+                   ON ({$this->_aliases['civicrm_contact']}.id = {$this->_aliases['civicrm_email']}.contact_id AND
+                      {$this->_aliases['civicrm_email']}.is_primary = 1) ";
+    }
+
+    if ($this->_phoneField) {
+      $this->_from .= "
+            LEFT JOIN civicrm_phone {$this->_aliases['civicrm_phone']}
+                   ON {$this->_aliases['civicrm_contact']}.id = {$this->_aliases['civicrm_phone']}.contact_id AND
+                      {$this->_aliases['civicrm_phone']}.is_primary = 1 ";
+    }
+
+    if ($this->isTableSelected('civicrm_country')) {
+      $this->_from .= "
+            LEFT JOIN civicrm_country {$this->_aliases['civicrm_country']}
+                   ON {$this->_aliases['civicrm_address']}.country_id = {$this->_aliases['civicrm_country']}.id AND
+                      {$this->_aliases['civicrm_address']}.is_primary = 1 ";
+    }
+
+
+    if ($this->isTableSelected('civicrm_activity')) {
+      $activity_type_clause = "1";
+      $activity_type_op = CRM_Utils_Array::value("activity_type_id_op", $this->_params);
+      if ($activity_type_op) {
+        $field = $this->_columns['civicrm_activity']['filters']['activity_type_id'];
+        $field['dbAlias'] = 'civicrm_activity.activity_type_id';
+        $activity_type_clause = $this->whereClause($field,
+          $activity_type_op,
+          CRM_Utils_Array::value("activity_type_id_value", $this->_params),
+          CRM_Utils_Array::value("activity_type_id_min", $this->_params),
+          CRM_Utils_Array::value("activity_type_id_max", $this->_params)
+        );
+      }
+
+      $this->_from .= "
+            LEFT JOIN (
+                      SELECT min(civicrm_activity.activity_date_time) as activity_date_time, civicrm_activity_contact.contact_id 
+                      FROM civicrm_activity 
+                      INNER JOIN civicrm_activity_contact ON civicrm_activity.id = civicrm_activity_contact.activity_id
+                      WHERE civicrm_activity.is_deleted = '0'
+                      AND civicrm_activity.is_current_revision = '1'
+                      AND {$activity_type_clause}
+                      GROUP BY civicrm_activity_contact.contact_id
+                      ) {$this->_aliases['civicrm_activity']} ON {$this->_aliases['civicrm_activity']}.contact_id = {$this->_aliases['civicrm_contact']}.id 
+            ";
+    }
+  }
+
+  /**
+   * Build where clause.
+   */
+  public function where() {
+    $this->storeWhereHavingClauseArray();
+
+    $deleteClause = "`{$this->_aliases['civicrm_contact']}`.`is_deleted` = '0'";
+
+    if (empty($this->_whereClauses)) {
+      $this->_where = "WHERE ( {$deleteClause} ) ";
+      $this->_having = "";
+    }
+    else {
+      $this->_where = "WHERE " . implode(' AND ', $this->_whereClauses) . " AND {$deleteClause}";
+    }
+
+    if ($this->_aclWhere) {
+      $this->_where .= " AND {$this->_aclWhere} ";
+    }
+
+    if (!empty($this->_havingClauses)) {
+      // use this clause to construct group by clause.
+      $this->_having = "HAVING " . implode(' AND ', $this->_havingClauses);
+    }
   }
 
   public function modifyColumnHeaders() {
