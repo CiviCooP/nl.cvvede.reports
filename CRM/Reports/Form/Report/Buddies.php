@@ -6,10 +6,11 @@ class CRM_Reports_Form_Report_Buddies extends CRM_Report_Form_Contact_Summary {
    * Class constructor.
    */
   public function __construct() {
-    $this->activityTypes = CRM_Core_OptionGroup::values('activity_type', FALSE, FALSE, FALSE, $condition);
+    $this->activityTypes = CRM_Core_OptionGroup::values('activity_type', FALSE, FALSE, FALSE);
     asort($this->activityTypes);
+    $this->activityTypes = array('' => ts(' - Select - ')) + $this->activityTypes;
 
-    parent::__construct();
+      parent::__construct();
     $this->_columns['civicrm_contact']['fields']['created_date'] = array(
       'title' => ts('Created Date'),
       'default' => FALSE,
