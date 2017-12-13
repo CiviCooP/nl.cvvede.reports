@@ -363,6 +363,53 @@ inner join civicrm_contact $c2 on ${c2}.id=${ccc}.contact_id
 
     $this->formatDisplay($rows);
     $this->doTemplateAssignment($rows);
+		if ($this->_outputMode == 'csv') {
+			// Add activities to the rows.
+			$newRows = array();
+			unset($this->_columnHeaders['manage']);
+			$columnHeaders = array_keys($this->_columnHeaders);
+			$newRowHeader = array();
+			foreach($this->_columnHeaders as $key => $header) {
+				$newRowHeader[$key] = $header['title'];
+			}
+			foreach($rows as $row) {
+				$newRow = $row;
+				unset($newRow['activities']);
+				$newRows[] = $newRowHeader;
+				$newRows[] = $newRow;
+				$columnCount = count($newRow);
+				$new_activity_row[$columnHeaders[0]] = '';
+				$currentColumn = 5;
+				$new_activity_row[$columnHeaders[1]] = 'Datum';
+				$new_activity_row[$columnHeaders[2]] = 'Activiteitstype';
+				$new_activity_row[$columnHeaders[3]] = 'Onderwerp';
+				$new_activity_row[$columnHeaders[4]] = 'Details';
+				$activityRowColumnCount = count($new_activity_row);
+				$columnsToAdd = $columnCount - $activityRowColumnCount;
+				for($i=0; $i < $columnsToAdd; $i++) {
+					$new_activity_row[$columnHeaders[$currentColumn]] = '';
+					$currentColumn++;
+				}
+				$newRows[] = $new_activity_row;
+				foreach($row['activities'] as $activity_row) {
+					$new_activity_row = array();
+					$new_activity_row[$columnHeaders[0]] = '';
+					$columnCount = 1;
+					foreach($activity_row as $column) {
+						$new_activity_row[$columnHeaders[$columnCount]] = $column;
+						$columnCount++;
+					}
+					$activityRowColumnCount = count($new_activity_row);
+					$columnsToAdd = $columnCount - $activityRowColumnCount;
+					for($i=0; $i < $columnsToAdd; $i++) {
+						$new_activity_row[$columnHeaders[$columnCount]] = '';
+						$columnCount++;
+					}
+					$newRows[] = $new_activity_row;
+				}
+			}
+			$rows = $newRows;
+		}
     $this->endPostProcess($rows);
   }
 
