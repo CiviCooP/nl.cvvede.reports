@@ -11,6 +11,7 @@ class CRM_Reports_Form_Report_Buddies extends CRM_Report_Form_Contact_Summary {
     $this->activityTypes = array('' => ts(' - Select - ')) + $this->activityTypes;
 
       parent::__construct();
+	  $this->_columns['civicrm_contact']['filters']['contact_sub_type']['pseudofield'] = true;
     $this->_columns['civicrm_contact']['fields']['created_date'] = array(
       'title' => ts('Created Date'),
       'default' => FALSE,
@@ -152,6 +153,22 @@ class CRM_Reports_Form_Report_Buddies extends CRM_Report_Form_Contact_Summary {
    */
   public function where() {
     $this->storeWhereHavingClauseArray();
+    
+    // Make a query statement for contact sub type
+    $contact_sub_type_op = CRM_Utils_Array::value("contact_sub_type_op", $this->_params);
+		if ($contact_sub_type_op == 'notin') {
+			$contact_sub_type_op = 'NOT LIKE';
+		} else {
+			$contact_sub_type_op = 'LIKE';
+		}
+    $contact_sub_type_value = '';
+    foreach($this->_params['contact_sub_type_value'] as $subtype) {
+    	$contact_sub_type_value .= '%'.CRM_Core_DAO::VALUE_SEPARATOR.$subtype.CRM_Core_DAO::VALUE_SEPARATOR;
+    }
+    if (!empty($contact_sub_type_value)) {
+    	$contact_sub_type_value .= '%';
+    	$this->_whereClauses[] = '('.$this->_columns['civicrm_contact']['filters']['contact_sub_type']['dbAlias'].' '.$contact_sub_type_op.' "' . CRM_Utils_Type::escape($contact_sub_type_value, 'String').'")';
+    }
 
     $deleteClause = "`{$this->_aliases['civicrm_contact']}`.`is_deleted` = '0'";
 
